@@ -263,7 +263,7 @@ begin
         4'd6: convTemp <= convTemp + maskBuffer[6]*K6;
         4'd7: convTemp <= convTemp + maskBuffer[7]*K7;
         4'd8: convTemp <= convTemp + maskBuffer[8]*K8;
-        4'd9: convTemp <= convTemp + {Bias,16'd0};
+        4'd9: convTemp <= convTemp + Bias;
         endcase
     end
 end
