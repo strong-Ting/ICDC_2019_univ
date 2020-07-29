@@ -39,6 +39,8 @@ reg signed [43:0] convTemp; // 2^20 * 2^20 * 2^4 = 2^44  By the way 2^4 = 9 pixe
 wire signed [20:0] roundTemp;
 //get the 4 bits int and 17 bits float then add 1 rounding the 17bit
 assign roundTemp = convTemp[35:15] + 21'd1; 
+reg signed [19:0] kernelTemp;
+
 
 //parameter
 parameter IDLE = 3'd0;
@@ -51,7 +53,7 @@ parameter WRITE_L1 = 3'd6;
 parameter FINISH = 3'd7;
 
 //kernel
-/*
+
 parameter K0 = 20'h0A89E ;
 parameter K1 = 20'h092D5 ;
 parameter K2 = 20'h06D43 ;
@@ -61,16 +63,23 @@ parameter K5 = 20'hF6E54 ;
 parameter K6 = 20'hFA6D7 ;
 parameter K7 = 20'hFC834 ;
 parameter K8 = 20'hFAC19 ;
-*/
-reg signed [19:0] K0 = 20'h0A89E;
-reg signed [19:0] K1 = 20'h092D5;
-reg signed [19:0] K2 = 20'h06D43;
-reg signed [19:0] K3 = 20'h01004;
-reg signed [19:0] K4 = 20'hF8F71;
-reg signed [19:0] K5 = 20'hF6E54;
-reg signed [19:0] K6 = 20'hFA6D7;
-reg signed [19:0] K7 = 20'hFC834;
-reg signed [19:0] K8 = 20'hFAC19;
+
+
+always@(*)
+begin
+    case(counterRead)
+    4'd0: kernelTemp = K0;
+    4'd1: kernelTemp = K1;
+    4'd2: kernelTemp = K2;
+    4'd3: kernelTemp = K3;
+    4'd4: kernelTemp = K4;
+    4'd5: kernelTemp = K5;
+    4'd6: kernelTemp = K6;
+    4'd7: kernelTemp = K7;
+    4'd8: kernelTemp = K8;
+    endcase
+end
+
 
 //reg signed [19:0] Bias = 20'h01310;
 reg signed [43:0] Bias = {8'd0,20'h01310,16'd0};
@@ -87,24 +96,21 @@ assign index_Y_After = index_Y + 6'd1;
 always@(posedge clk or posedge reset)
 begin
     if(reset) index_X <= 6'd0;
-    else if(current_State == WRITE_L0) 
+    else if(current_State == WRITE_L0 || current_State == WRITE_L1) 
     begin
         if(index_X == 6'd63) index_X <= 6'd0;
         else index_X <= index_X + 6'd1;
     end
-    else index_X <= index_X; 
 end
 
 always@(posedge clk or posedge reset)
 begin
     if(reset) index_Y <= 6'd0;
-    else if(current_State == WRITE_L0)
+    else if(current_State == WRITE_L0 || current_State == WRITE_L1)
     begin
         if(index_X == 6'd63) index_Y <= index_Y + 6'd1;
         else if(index_Y == 6'd63 && index_X == 6'd63) index_Y <= 6'd0;
-        else index_Y <= index_Y;
     end
-    else index_Y <= index_Y;
 end
 
 //counter
@@ -202,12 +208,12 @@ begin
             end
         READ_L0:
             begin
-                
-
+                if(counterRead == 4'd4) next_State = MAX_POOLING;
+                else next_State = READ_L0;
             end
         MAX_POOLING:
             begin
-                
+                next_State = WRITE_L1;
             end
         WRITE_L1:
             begin
@@ -256,14 +262,14 @@ begin
 
         case(counterRead)
         4'd0: convTemp <= maskBuffer[0]*K0;
-        4'd1: convTemp <= convTemp + maskBuffer[1]*K1;
-        4'd2: convTemp <= convTemp + maskBuffer[2]*K2;
-        4'd3: convTemp <= convTemp + maskBuffer[3]*K3;
-        4'd4: convTemp <= convTemp + maskBuffer[4]*K4;
-        4'd5: convTemp <= convTemp + maskBuffer[5]*K5;
-        4'd6: convTemp <= convTemp + maskBuffer[6]*K6;
-        4'd7: convTemp <= convTemp + maskBuffer[7]*K7;
-        4'd8: convTemp <= convTemp + maskBuffer[8]*K8;
+        4'd1: convTemp <= convTemp + maskBuffer[1]*kernelTemp;
+        4'd2: convTemp <= convTemp + maskBuffer[2]*kernelTemp;
+        4'd3: convTemp <= convTemp + maskBuffer[3]*kernelTemp;
+        4'd4: convTemp <= convTemp + maskBuffer[4]*kernelTemp;
+        4'd5: convTemp <= convTemp + maskBuffer[5]*kernelTemp;
+        4'd6: convTemp <= convTemp + maskBuffer[6]*kernelTemp;
+        4'd7: convTemp <= convTemp + maskBuffer[7]*kernelTemp;
+        4'd8: convTemp <= convTemp + maskBuffer[8]*kernelTemp;
         4'd9: convTemp <= convTemp + Bias;
         endcase
     end
