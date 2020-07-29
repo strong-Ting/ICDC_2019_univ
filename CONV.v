@@ -36,8 +36,9 @@ wire [5:0] index_X_After,index_X_Before,index_Y_After,index_Y_Before;
 
 
 reg signed [43:0] convTemp; // 2^20 * 2^20 * 2^4 = 2^44  By the way 2^4 = 9 pixel
-wire signed [20:0] temp;
-assign temp = convTemp[35:15] +20'd1;
+wire signed [20:0] roundTemp;
+//get the 4 bits int and 17 bits float then add 1 rounding the 17bit
+assign roundTemp = convTemp[35:15] + 21'd1; 
 
 //parameter
 parameter IDLE = 3'd0;
@@ -236,7 +237,7 @@ begin
     else if(current_State == WRITE_L0)
     begin
         if(convTemp[43]) cdata_wr <= 20'd0;
-        else cdata_wr <= temp[20:1];//convTemp[35:16];//+20'd1;
+        else cdata_wr <= roundTemp[20:1];
     end
 end
 
