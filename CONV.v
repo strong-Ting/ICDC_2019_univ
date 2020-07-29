@@ -35,12 +35,13 @@ reg [5:0] index_X,index_Y;
 wire [5:0] index_X_After,index_X_Before,index_Y_After,index_Y_Before;
 
 
+
 reg signed [43:0] convTemp; // 2^20 * 2^20 * 2^4 = 2^44  By the way 2^4 = 9 pixel
 wire signed [20:0] roundTemp;
 //get the 4 bits int and 17 bits float then add 1 rounding the 17bit
 assign roundTemp = convTemp[35:15] + 21'd1; 
 reg signed [19:0] kernelTemp;
-
+reg signed [19:0] maskTemp;
 
 //parameter
 parameter IDLE = 3'd0;
@@ -77,9 +78,27 @@ begin
     4'd6: kernelTemp = K6;
     4'd7: kernelTemp = K7;
     4'd8: kernelTemp = K8;
+    default: kernelTemp = 20'd0;
     endcase
 end
 
+always@(*)
+begin
+    case(counterRead)
+    4'd0: maskTemp = maskBuffer[0];
+    4'd1: maskTemp = maskBuffer[1];
+    4'd2: maskTemp = maskBuffer[2];
+    4'd3: maskTemp = maskBuffer[3];
+    4'd4: maskTemp = maskBuffer[4];
+    4'd5: maskTemp = maskBuffer[5];
+    4'd6: maskTemp = maskBuffer[6];
+    4'd7: maskTemp = maskBuffer[7];
+    4'd8: maskTemp = maskBuffer[8];
+    default: maskTemp = 20'd0;
+    
+    endcase
+end
+    
 
 //reg signed [19:0] Bias = 20'h01310;
 reg signed [43:0] Bias = {8'd0,20'h01310,16'd0};
@@ -116,7 +135,7 @@ end
 //counter
 always@(posedge clk or posedge reset)
 begin
-    if(reset) counterRead = 4'd0;
+    if(reset) counterRead <= 4'd0;
     else if(counterRead == 4'd9) counterRead <= 4'd0;
     else if(current_State == READ || current_State == CONV) counterRead <= counterRead + 4'd1;
 end
@@ -124,7 +143,7 @@ end
 //busy
 always@(posedge clk or posedge reset)
 begin
-    if(reset) busy = 1'd0;
+    if(reset) busy <= 1'd0;
     else if(ready == 1'd1) busy <= 1'd1;
     else if(current_State == FINISH )busy <= 1'd0;
 end
@@ -258,8 +277,7 @@ begin
                 +   maskBuffer[3]* K3 +maskBuffer[4]*K4 +maskBuffer[5]*K5
                 +   maskBuffer[6]* K6 +maskBuffer[7]*K7 +maskBuffer[8]*K8 
                 +   Bias;*/
-        
-
+        /*
         case(counterRead)
         4'd0: convTemp <= maskBuffer[0]*K0;
         4'd1: convTemp <= convTemp + maskBuffer[1]*kernelTemp;
@@ -271,8 +289,11 @@ begin
         4'd7: convTemp <= convTemp + maskBuffer[7]*kernelTemp;
         4'd8: convTemp <= convTemp + maskBuffer[8]*kernelTemp;
         4'd9: convTemp <= convTemp + Bias;
-        endcase
+        endcase*/
+        if(counterRead == 4'd9) convTemp <= convTemp + Bias;
+        else convTemp <= convTemp + kernelTemp*maskTemp;
     end
+    else if(current_State == READ) convTemp <= 44'd0;
 end
 
 
