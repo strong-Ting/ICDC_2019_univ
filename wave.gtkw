@@ -1,20 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
-[*] Tue Jul 28 17:00:15 2020
+[*] Thu Jul 30 13:38:35 2020
 [*]
 [dumpfile] "C:\Users\lin\Desktop\CIC_my\CIC_2019\CIC_2019_univ\wave.vcd"
-[dumpfile_mtime] "Tue Jul 28 16:56:30 2020"
-[dumpfile_size] 9443118
+[dumpfile_mtime] "Thu Jul 30 13:30:59 2020"
+[dumpfile_size] 13331958
 [savefile] "C:\Users\lin\Desktop\CIC_my\CIC_2019\CIC_2019_univ\wave.gtkw"
-[timestart] 847692000
+[timestart] 931654000
 [size] 1920 1017
-[pos] -165 -165
-*-15.000000 847815000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-15.000000 886099900 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] testfixture.
 [sst_width] 197
 [signals_width] 174
 [sst_expanded] 1
-[sst_vpaned_height] 633
+[sst_vpaned_height] 299
 @28
 testfixture.clk
 testfixture.busy
@@ -28,8 +28,19 @@ testfixture.u_CONV.idata[19:0]
 @22
 testfixture.u_CONV.convTemp[43:0]
 testfixture.u_CONV.counterRead[3:0]
-testfixture.u_CONV.caddr_wr[11:0]
-@23
+@24
+testfixture.u_CONV.csel[2:0]
+@28
+testfixture.u_CONV.crd
+@24
+testfixture.u_CONV.cdata_rd[19:0]
 testfixture.u_CONV.cdata_wr[19:0]
+@25
+testfixture.u_CONV.caddr_wr[11:0]
+@24
+testfixture.u_CONV.caddr_rd[11:0]
+@28
+testfixture.u_CONV.cwr
+testfixture.u_CONV.crd
 [pattern_trace] 1
 [pattern_trace] 0

@@ -64,7 +64,7 @@ parameter K5 = 20'hF6E54 ;
 parameter K6 = 20'hFA6D7 ;
 parameter K7 = 20'hFC834 ;
 parameter K8 = 20'hFAC19 ;
-
+parameter Bias = {8'd0,20'h01310,16'd0} ;
 
 always@(*)
 begin
@@ -101,7 +101,7 @@ end
     
 
 //reg signed [19:0] Bias = 20'h01310;
-reg signed [43:0] Bias = {8'd0,20'h01310,16'd0};
+
 
 
 
@@ -115,20 +115,30 @@ assign index_Y_After = index_Y + 6'd1;
 always@(posedge clk or posedge reset)
 begin
     if(reset) index_X <= 6'd0;
-    else if(current_State == WRITE_L0 || current_State == WRITE_L1) 
+    else if(current_State == WRITE_L0) 
     begin
         if(index_X == 6'd63) index_X <= 6'd0;
         else index_X <= index_X + 6'd1;
+    end
+    else if(current_State == WRITE_L1)
+    begin
+        if(index_X == 6'd62) index_X <= 6'd0;
+        else index_X <= index_X + 6'd2;
     end
 end
 
 always@(posedge clk or posedge reset)
 begin
     if(reset) index_Y <= 6'd0;
-    else if(current_State == WRITE_L0 || current_State == WRITE_L1)
+    else if(current_State == WRITE_L0)
     begin
         if(index_X == 6'd63) index_Y <= index_Y + 6'd1;
-        else if(index_Y == 6'd63 && index_X == 6'd63) index_Y <= 6'd0;
+       // else if(index_Y == 6'd63 && index_X == 6'd63) index_Y <= 6'd0; //useless
+    end
+    else if(current_State == WRITE_L1)
+    begin
+        if(index_X == 6'd62) index_Y <= index_Y + 6'd2;
+      //  else if(index_Y == 6'd62 && index_X == 6'd62) index_Y <= 6'd0;
     end
 end
 
@@ -137,7 +147,8 @@ always@(posedge clk or posedge reset)
 begin
     if(reset) counterRead <= 4'd0;
     else if(counterRead == 4'd9) counterRead <= 4'd0;
-    else if(current_State == READ || current_State == CONV) counterRead <= counterRead + 4'd1;
+    else if(counterRead == 4'd4 && current_State == READ_L0) counterRead <= 4'd0;
+    else if(current_State == READ || current_State == CONV || current_State == READ_L0) counterRead <= counterRead + 4'd1;
 end
 
 //busy
@@ -149,47 +160,27 @@ begin
 end
 
 //cwr crd csel
-always @(posedge clk or posedge reset) begin
-    if(reset)
-    begin
-        cwr <= 1'd0;
-        crd <=1'd0;
-        csel <= 3'd0;
-    end
-    else
-    begin
-        case(current_State)  // I think have timing issue
-        //IDLE:
-        //READ:
-        //CONV:
-        WRITE_L0:
-        begin
-            cwr <= 1'd1;
-            crd <= 1'd0;
-            csel <= 3'd1; //chose layer 0 
-        end
-        READ_L0:
-        begin
-            cwr <= 1'd0;
-            crd <= 1'd1;
-            csel <= 3'd1;
-        end
-        //MAX_POOLING:
-        WRITE_L1:
-        begin
-            cwr <= 1'd1;
-            crd <= 1'd0;
-            csel <= 3'd2;
-        end
-        //FINISH:
-        default:
-        begin
-            cwr <= 1'd0;
-            crd <=1'd0;
-            csel <= 3'd0;
-        end
-        endcase
-    end
+always@(posedge clk or posedge reset)
+begin
+    if(reset) cwr <= 1'd0;
+    else if(current_State == WRITE_L0) cwr <= 1'd1;
+    else if(next_State == WRITE_L1) cwr <= 1'd1;
+    else if(current_State != WRITE_L0) cwr <= 1'd0;
+end
+
+always@(posedge clk or posedge reset)
+begin
+    if(reset) crd <= 1'd0;
+    else if(current_State == READ_L0) crd <= 1'd1;
+end
+
+always@(posedge clk or posedge reset)
+begin
+    if(reset) csel <=3'd0;
+    else if(next_State == WRITE_L1) csel <= 3'd3;
+    else if(current_State == WRITE_L0) csel <= 3'd1;
+    else if(current_State == READ_L0) csel <= 3'd1;
+    
 end
 
 
@@ -222,7 +213,7 @@ begin
             end
         WRITE_L0:
             begin
-                if(index_X == 6'd63 && index_Y == 6'd63) next_State = FINISH;
+                if(index_X == 6'd63 && index_Y == 6'd63) next_State = READ_L0;
                 else next_State = READ;
             end
         READ_L0:
@@ -236,15 +227,16 @@ begin
             end
         WRITE_L1:
             begin
-                
+                if(index_X == 6'd62 && index_Y == 6'd62) next_State = FINISH;
+                else next_State = READ_L0;
             end
         FINISH: 
             begin
-                
+                next_State = FINISH;
             end
         default:
             begin
-                
+                next_State = IDLE;
             end 
     endcase    
 end
@@ -254,6 +246,7 @@ always@(posedge clk or posedge reset)
 begin
     if(reset) caddr_wr <= 6'd0;
     else if(current_State == WRITE_L0) caddr_wr <= {index_Y,index_X};
+    else if(next_State == WRITE_L1) caddr_wr <= {index_Y[5:1],index_X[5:1]} ;
 end
 
 always@(posedge clk or posedge reset)
@@ -263,6 +256,31 @@ begin
     begin
         if(convTemp[43]) cdata_wr <= 20'd0;
         else cdata_wr <= roundTemp[20:1];
+    end
+    else if(current_State == READ_L0)
+    begin
+        if(counterRead == 4'd1) cdata_wr <= cdata_rd;
+        else 
+        begin
+            if(cdata_rd > cdata_wr) cdata_wr <= cdata_rd;
+            else cdata_wr <= cdata_wr;
+        end
+    end
+end
+
+// caddr_rd
+always@(posedge clk or posedge reset)
+begin
+    if(reset) caddr_rd <= 6'd0;
+    else if(current_State == READ_L0)
+    begin
+        case(counterRead)
+        4'd0: caddr_rd <= {index_Y,index_X};
+        4'd1: caddr_rd <= {index_Y,index_X_After};
+        4'd2: caddr_rd <= {index_Y_After,index_X};
+        4'd3: caddr_rd <= {index_Y_After,index_X_After};
+        default: caddr_rd <= 6'd0;
+        endcase
     end
 end
 
