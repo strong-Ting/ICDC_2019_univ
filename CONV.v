@@ -77,7 +77,7 @@ begin
     default: kernelTemp = 20'd0;
     endcase
 end
-    
+
 //index x y
 assign index_X_Before = index_X - 6'd1;
 assign index_X_After = index_X + 6'd1;
@@ -144,7 +144,7 @@ begin
                 if(counterRead == 4'd4) next_State = MAX_POOLING;
                 else next_State = READ_L0;
             end
-        MAX_POOLING:
+        MAX_POOLING: // to delay 1 clk and get max pooling result
             begin
                 next_State = WRITE_L1;
             end
@@ -204,62 +204,59 @@ begin
     else if(current_State == READ_L0) csel <= 3'd1; 
 end
 
-/* TO DO
-wire [11:0] addrlogic;
-always@(*)
+//addr
+reg [11:0] addrlogic;
+always@(current_State or next_State or counterRead)
 begin
     if(current_State == READ_CONV)
     begin
         case(counterRead)
+        4'd0: addrlogic = {index_Y_Before,index_X_Before};
+        4'd1: addrlogic = {index_Y_Before,index_X};
+        4'd2: addrlogic = {index_Y_Before,index_X_After};
+        4'd3: addrlogic = {index_Y,index_X_Before};
+        4'd4: addrlogic = {index_Y,index_X};
+        4'd5: addrlogic = {index_Y,index_X_After};
+        4'd6: addrlogic = {index_Y_After,index_X_Before};
+        4'd7: addrlogic = {index_Y_After,index_X};
+        4'd8: addrlogic = {index_Y_After,index_X_After};
+        default: addrlogic = 6'd0;
+        endcase
     end
     else if(current_State == READ_L0)
-    else if(current_State == WRITE_L0)
-    else if(next_State == WRITE_L1)
+    begin
+        case(counterRead)
+        4'd0: addrlogic = {index_Y,index_X};
+        4'd1: addrlogic = {index_Y,index_X_After};
+        4'd2: addrlogic = {index_Y_After,index_X};
+        4'd3: addrlogic = {index_Y_After,index_X_After};
+        default: addrlogic = 6'd0;
+        endcase
+    end
+    else if(current_State == WRITE_L0) addrlogic = {index_Y,index_X};
+    else if(next_State == WRITE_L1) addrlogic = {index_Y[5:1],index_X[5:1]} ;
 end
-*/
+
 //iaddr
 always@(posedge clk or posedge reset)
 begin
     if(reset) iaddr <= 6'd0;
-    else if(current_State == READ_CONV)
-    begin
-        case(counterRead)
-        4'd0: iaddr <= {index_Y_Before,index_X_Before};
-        4'd1: iaddr <= {index_Y_Before,index_X};
-        4'd2: iaddr <= {index_Y_Before,index_X_After};
-        4'd3: iaddr <= {index_Y,index_X_Before};
-        4'd4: iaddr <= {index_Y,index_X};
-        4'd5: iaddr <= {index_Y,index_X_After};
-        4'd6: iaddr <= {index_Y_After,index_X_Before};
-        4'd7: iaddr <= {index_Y_After,index_X};
-        4'd8: iaddr <= {index_Y_After,index_X_After};
-        default: iaddr <= 6'd0;
-        endcase
-    end
+    else if(current_State == READ_CONV) iaddr <= addrlogic;
 end
 
 // caddr_rd
 always@(posedge clk or posedge reset)
 begin
     if(reset) caddr_rd <= 6'd0;
-    else if(current_State == READ_L0)
-    begin
-        case(counterRead)
-        4'd0: caddr_rd <= {index_Y,index_X};
-        4'd1: caddr_rd <= {index_Y,index_X_After};
-        4'd2: caddr_rd <= {index_Y_After,index_X};
-        4'd3: caddr_rd <= {index_Y_After,index_X_After};
-        default: caddr_rd <= 6'd0;
-        endcase
-    end
+    else if(current_State == READ_L0) caddr_rd <= addrlogic;
 end
 
 //caddr_wr
 always@(posedge clk or posedge reset)
 begin
     if(reset) caddr_wr <= 6'd0;
-    else if(current_State == WRITE_L0) caddr_wr <= {index_Y,index_X};
-    else if(next_State == WRITE_L1) caddr_wr <= {index_Y[5:1],index_X[5:1]} ;
+    else if(current_State == WRITE_L0) caddr_wr <= addrlogic;
+    else if(next_State == WRITE_L1) caddr_wr <= addrlogic;
 end
 
 //cdata_wr
@@ -289,43 +286,16 @@ begin
     else if(current_State == READ_CONV)
     begin
         case(counterRead)
-        4'd1:
-        begin
-            if(index_X == 6'd0 || index_Y == 6'd0) convTemp <= 44'd0;
-            else convTemp <= kernelTemp * idata;
-        end
-        4'd2:
-        begin
-            if(index_Y != 6'd0) convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd3:
-        begin
-            if(index_Y != 6'd0 && index_X != 6'd63) convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd4:
-        begin
-            if(index_X != 6'd0) convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd5:
-        begin
-            convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd6:
-        begin
-            if(index_X != 6'd63) convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd7:
-        begin
-            if(index_X != 6'd0 && index_Y != 6'd63) convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd8:
-        begin
-            if(index_Y != 6'd63) convTemp <= convTemp + kernelTemp * idata;
-        end
-        4'd9:
-        begin
-            if(index_Y != 6'd63 && index_X != 6'd63) convTemp <= convTemp + (kernelTemp * idata);
-        end
+        4'd0: convTemp <= 44'd0;
+        4'd1:   if(index_X != 6'd0 && index_Y != 6'd0)  convTemp <= kernelTemp * idata;
+        4'd2:   if(index_Y != 6'd0) convTemp <= convTemp + kernelTemp * idata;
+        4'd3:   if(index_Y != 6'd0 && index_X != 6'd63) convTemp <= convTemp + kernelTemp * idata;
+        4'd4:   if(index_X != 6'd0) convTemp <= convTemp + kernelTemp * idata;
+        4'd5:   convTemp <= convTemp + kernelTemp * idata;
+        4'd6:   if(index_X != 6'd63) convTemp <= convTemp + kernelTemp * idata;
+        4'd7:   if(index_X != 6'd0 && index_Y != 6'd63) convTemp <= convTemp + kernelTemp * idata;
+        4'd8:   if(index_Y != 6'd63) convTemp <= convTemp + kernelTemp * idata;
+        4'd9:   if(index_Y != 6'd63 && index_X != 6'd63) convTemp <= convTemp + (kernelTemp * idata);
         4'd10: convTemp <= convTemp + Bias;
         endcase
     end
