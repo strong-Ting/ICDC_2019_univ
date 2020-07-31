@@ -261,7 +261,7 @@ begin
         end
     end
 end
-wire signed [44:0] mulTemp;
+wire signed [43:0] mulTemp;
 assign mulTemp = kernelTemp * idata;
 //conv && bias
 always@(posedge clk or posedge reset)
@@ -270,17 +270,19 @@ begin
     else if(current_State == READ_CONV)
     begin
         case(counterRead)
+        
         4'd0:   convTemp <= 44'd0;
-        4'd1:   if(index_X != 6'd0 && index_Y != 6'd0)  convTemp <= mulTemp;
-        4'd2:   if(index_Y != 6'd0) convTemp <= convTemp + mulTemp;
-        4'd3:   if(index_Y != 6'd0 && index_X != 6'd63) convTemp <= convTemp + mulTemp;
-        4'd4:   if(index_X != 6'd0) convTemp <= convTemp + mulTemp;
+        4'd1:   if(|index_X & |index_Y)  convTemp <= mulTemp;
+        4'd2:   if(|index_Y) convTemp <= convTemp + mulTemp;
+        4'd3:   if((|index_Y)&(~&index_X)) convTemp <= convTemp + mulTemp;
+        4'd4:   if(index_X) convTemp <= convTemp + mulTemp;
         4'd5:   convTemp <= convTemp + mulTemp;
-        4'd6:   if(index_X != 6'd63) convTemp <= convTemp + mulTemp;
-        4'd7:   if(index_X != 6'd0 && index_Y != 6'd63) convTemp <= convTemp + mulTemp;
-        4'd8:   if(index_Y != 6'd63) convTemp <= convTemp + mulTemp;
-        4'd9:   if(index_Y != 6'd63 && index_X != 6'd63) convTemp <= convTemp + mulTemp;
+        4'd6:   if(~&index_X) convTemp <= convTemp + mulTemp;
+        4'd7:   if((|index_X)&(~&index_Y)) convTemp <= convTemp + mulTemp;
+        4'd8:   if(~&index_Y) convTemp <= convTemp + mulTemp;
+        4'd9:   if(~&index_Y & ~&index_X) convTemp <= convTemp + mulTemp;
         4'd10:  convTemp <= convTemp + Bias;
+
         endcase
     end
 end
