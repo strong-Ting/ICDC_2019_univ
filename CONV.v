@@ -65,15 +65,15 @@ parameter Bias = {8'd0,20'h01310,16'd0} ;
 always@(*)
 begin
     case(counterRead)
-    4'd1: kernelTemp = K0;
-    4'd2: kernelTemp = K1;
-    4'd3: kernelTemp = K2;
-    4'd4: kernelTemp = K3;
-    4'd5: kernelTemp = K4;
-    4'd6: kernelTemp = K5;
-    4'd7: kernelTemp = K6;
-    4'd8: kernelTemp = K7;
-    4'd9: kernelTemp = K8;
+    4'd2: kernelTemp = K0;
+    4'd3: kernelTemp = K1;
+    4'd4: kernelTemp = K2;
+    4'd5: kernelTemp = K3;
+    4'd6: kernelTemp = K4;
+    4'd7: kernelTemp = K5;
+    4'd8: kernelTemp = K6;
+    4'd9: kernelTemp = K7;
+    4'd10: kernelTemp = K8;
     default: kernelTemp = 20'd0;
     endcase
 end
@@ -131,7 +131,7 @@ begin
             end
         READ_CONV:
             begin
-                if(counterRead == 4'd10) next_State = WRITE_L0;
+                if(counterRead == 4'd11) next_State = WRITE_L0;
                 else next_State = READ_CONV;
             end
         WRITE_L0:
@@ -168,7 +168,7 @@ end
 always@(posedge clk or posedge reset)
 begin
     if(reset) counterRead <= 4'd0;
-    else if(counterRead == 4'd10) counterRead <= 4'd0;
+    else if(counterRead == 4'd11) counterRead <= 4'd0;
     else if(counterRead == 4'd4 && current_State == READ_L0) counterRead <= 4'd0;
     else if(current_State == READ_CONV || current_State == READ_L0) counterRead <= counterRead + 4'd1;
 end
@@ -261,30 +261,35 @@ begin
         end
     end
 end
+reg signed[19:0] idataTemp;
 wire signed [43:0] mulTemp;
-assign mulTemp = kernelTemp * idata;
+assign mulTemp = kernelTemp * idataTemp;
 //conv && bias
 always@(posedge clk or posedge reset)
 begin
     if(reset) convTemp <= 44'd0; 
     else if(current_State == READ_CONV)
     begin
+        idataTemp <= idata;
         case(counterRead)
         
         4'd0:   convTemp <= 44'd0;
-        4'd1:   if(|index_X & |index_Y)  convTemp <= mulTemp;
-        4'd2:   if(|index_Y) convTemp <= convTemp + mulTemp;
-        4'd3:   if((|index_Y)&(~&index_X)) convTemp <= convTemp + mulTemp;
-        4'd4:   if(index_X) convTemp <= convTemp + mulTemp;
-        4'd5:   convTemp <= convTemp + mulTemp;
-        4'd6:   if(~&index_X) convTemp <= convTemp + mulTemp;
-        4'd7:   if((|index_X)&(~&index_Y)) convTemp <= convTemp + mulTemp;
-        4'd8:   if(~&index_Y) convTemp <= convTemp + mulTemp;
-        4'd9:   if(~&index_Y & ~&index_X) convTemp <= convTemp + mulTemp;
-        4'd10:  convTemp <= convTemp + Bias;
+        4'd2:   if(index_X != 6'd0 && index_Y != 6'd0)  convTemp <= mulTemp;
+        4'd3:   if(index_Y != 6'd0) convTemp <= convTemp + mulTemp;
+        4'd4:   if(index_Y != 6'd0 && index_X != 6'd63) convTemp <= convTemp + mulTemp;
+        4'd5:   if(index_X != 6'd0) convTemp <= convTemp + mulTemp;
+        4'd6:   convTemp <= convTemp + mulTemp;
+        4'd7:   if(index_X != 6'd63) convTemp <= convTemp + mulTemp;
+        4'd8:   if(index_X != 6'd0 && index_Y != 6'd63) convTemp <= convTemp + mulTemp;
+        4'd9:   if(index_Y != 6'd63) convTemp <= convTemp + mulTemp;
+        4'd10:   if(index_Y != 6'd63 && index_X != 6'd63) convTemp <= convTemp + mulTemp;
+        4'd11:  convTemp <= convTemp + Bias;
 
         endcase
     end
 end
+
+        
+
 
 endmodule
