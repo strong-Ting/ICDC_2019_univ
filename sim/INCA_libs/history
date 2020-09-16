@@ -1,0 +1,7 @@
+//
+// File created by:  irun
+// Do not modify this file
+
+s1::(16Sep2020:16:08:21):( ncverilog testfixture.v ../src/CONV.v )
+s2::(16Sep2020:17:22:12):( ncverilog testfixture.v ../syn/CONV_syn.v -v tsmc13_neg.v +define+SDF +access+r )
+s3::(16Sep2020:17:22:41):( ncverilog testfixture.v ../syn/CONV_syn.v -v tsmc13_neg.v +define+SDF +access+r )
